@@ -156,12 +156,10 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
         for inode, nlookup in inode_list:
             LOG.info('Forget %d (by %d)', inode, nlookup)
             v = self._inodes[inode]
-            v.refcount -= nlookup
+            v.close(nlookup=nlookup)
             assert( v.refcount >= 0)
             if v.refcount == 0:
                 LOG.debug('Deleting inode %d: %s', inode, v)
-                if v.fd > 0:
-                    os.close(v.fd)
                 del self._inodes[inode]
 
     #############################

@@ -57,7 +57,8 @@ def _get_header_size(opath_fd):
 
 class Entry():
     __slots__ = ('refcount',
-                 'fd',
+                 '_fd',
+                 'parent_fd',
                  'underlying_name',
                  'display_name',
                  'extension',
@@ -66,9 +67,10 @@ class Entry():
                  '_header_size')
 
     def __init__(self, parent_fd, underlying_name, s,
-                 extension=None, header_size_hint=None, assume_same_size_headers=True):
-        self.refcount = 1
-        self.fd = os.open(underlying_name, os.O_PATH | os.O_NOFOLLOW, dir_fd=parent_fd)
+                 extension=None, header_size_hint=None, assume_same_size_headers: "bool" = True):
+        self._fd = None
+        self.refcount = 0
+        self.parent_fd = parent_fd
         self.underlying_name = underlying_name
         self.display_name = underlying_name
         self.extension = extension
@@ -101,17 +103,35 @@ class Entry():
             LOG.debug('Getting header size for %s', self.underlying_name)
             self._header_size = _get_header_size(self.fd)
             LOG.debug('Found header size: %s', self._header_size)
+            self.close()
         return self._header_size
 
 
     def __repr__(self):
         encrypted = f" | C4GH | header {self.get_header_size()}" if self.is_c4gh() else ""
-        return f'<Entry {self.display_name} refcount={self.refcount} fd={self.fd} ino={self.entry.st_ino}{encrypted}>'
+        return f'<Entry {self.display_name} refcount={self.refcount} fd={self._fd} ino={self.entry.st_ino}{encrypted}>'
 
     def encoded_name(self):
         return os.fsencode(self.display_name)
 
-    # def __del__(self):
-    #     LOG.debug('Deleting %s', self)
-    #     if self.fd > 0:
-    #         os.close(self.fd)
+    @property
+    def fd(self):
+        if self._fd is None:
+            self.refcount = 1
+            self._fd = os.open(self.underlying_name, os.O_PATH | os.O_NOFOLLOW, dir_fd=self.parent_fd)
+
+        return self._fd
+
+    def close(self, nlookup: "int" = 1):
+        if self.refcount > 0:
+            if nlookup < 0:
+                self.refcount = 0
+            else:
+                self.refcount -= nlookup
+        if self.refcount <= 0 and self._fd is not None and self._fd > 0:
+            os.close(self._fd)
+            self._fd = None
+
+    def __del__(self):
+        LOG.debug('Deleting %s', self)
+        self.close(nlookup=-1)
