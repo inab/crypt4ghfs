@@ -188,15 +188,18 @@ def detach(umask=0):
         LOG.info('Forking current process, and exiting the parent')
         pid = os.fork()
         if pid > 0:  # make the parent exist
-            sys.exit(0)
+            os._exit(0)
     except OSError as err:
         print('fork failed:', err, file=sys.stderr)
         sys.exit(1)
 
     # decouple from parent environment
     LOG.info('decouple from parent environment')
-    os.chdir('/')
     os.setsid()
+    pid = os.fork()
+    if pid:
+        os._exit(0)
+    os.chdir('/')
     os.umask(umask)
 
     # redirect standard file descriptors
