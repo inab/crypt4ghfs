@@ -6,8 +6,18 @@ from setuptools import setup, find_packages
 
 _readme = (Path(__file__).parent / "README.md").read_text()
 
+# Populating the install requirements
+with open(
+    Path(__file__).parent / "requirements.txt", mode="r", encoding="iso-8859-1"
+) as f:
+    install_requirements = []
+    egg = re.compile(r"#[^#]*egg=([^=&]+)")
+    for line in f.read().splitlines():
+        m = egg.search(line)
+        install_requirements.append(line if m is None else m.group(1))
+
 setup(name='crypt4ghfs',
-      version='1.2',
+      version='1.2.1',
       url='https://github.com/EGA-archive/crypt4ghfs',
       license='Apache License 2.0',
       author='Frédéric Haziza',
@@ -49,9 +59,5 @@ setup(name='crypt4ghfs',
       ],
       python_requires='>=3.6',
       # See https://packaging.python.org/discussions/install-requires-vs-requirements/
-      install_requires=[
-          'pyfuse3',
-          'trio',
-          'crypt4gh>=1.5',
-      ],
+      install_requires=install_requirements,
 )
