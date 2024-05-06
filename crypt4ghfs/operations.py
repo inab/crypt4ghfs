@@ -145,12 +145,12 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
         
     @capture_oserror
     async def getattr(self, inode, ctx=None):
-        LOG.info('getattr inode: %d', inode)
+        LOG.debug('getattr inode: %d', inode)
         return self._inodes[inode].entry
 
     @capture_oserror
     async def statfs(self, ctx):
-        LOG.info('Getting statfs')
+        LOG.debug('Getting statfs')
         s = pyfuse3.StatvfsData()
         statfs = os.statvfs("", dir_fd=self.rootfd)
         for attr in ('f_bsize', 'f_frsize', 'f_blocks', 'f_bfree', 'f_bavail',
@@ -160,7 +160,7 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
 
     async def forget(self, inode_list):
         for inode, nlookup in inode_list:
-            LOG.info('Forget %d (by %d)', inode, nlookup)
+            LOG.debug('Forget %d (by %d)', inode, nlookup)
             v = self._inodes[inode]
             v.close(nlookup=nlookup)
             assert( v.refcount >= 0)
@@ -182,7 +182,7 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
 
     @capture_oserror
     async def opendir(self, inode, ctx):
-        LOG.info('opendir inode %d', inode)
+        LOG.debug('opendir inode %d', inode)
         fd = os.open(".", os.O_RDONLY, dir_fd=self.fd(inode))
         entries = sorted(self._scandir(inode, fd), key=lambda n: n.entry.st_ino)
         #LOG.debug('opendir entries: %s', entries)
@@ -193,7 +193,7 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
     async def readdir(self, inode, off, token):
         if not off:
             off = -1
-        LOG.info('readdir inode %d | offset %s', inode, off)
+        LOG.debug('readdir inode %d | offset %s', inode, off)
         for n in self._entries[inode]:
             ino = n.entry.st_ino
             if ino < off:
@@ -204,12 +204,12 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
             return False # over
 
     async def releasedir(self, inode):
-        LOG.info('releasedir inode %d', inode)
+        LOG.debug('releasedir inode %d', inode)
         self._entries.pop(inode, None)
 
     @capture_oserror
     async def mkdir(self, inode_p, name, mode, ctx):
-        LOG.info('mkdir in %d with name %s [mode: %o]', inode_p, name, mode)
+        LOG.debug('mkdir in %d with name %s [mode: %o]', inode_p, name, mode)
         os.mkdir(os.fsdecode(name), mode=(mode & ~ctx.umask), dir_fd=self.fd(inode_p))
         return await self.lookup(inode_p, name, ctx=ctx)
 
@@ -228,7 +228,7 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
     @capture_oserror
     async def open(self, inode, flags, ctx):
 
-        LOG.info('open with flags %x', flags)
+        LOG.debug('open with flags %x', flags)
         
         # We don't allow to append or open in RW mode
         if (flags & os.O_RDWR or flags & os.O_APPEND):
@@ -241,7 +241,7 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
             entry = self._get_inode(inode)
             fd = entry.fd
             # New fd everytime we open, cuz of the segment
-            path = f"/proc/self/fd/{fd}"
+            path = f"/dev/fd/{fd}"
             openfd = os.open(path, flags)
             f = os.fdopen(openfd, mode='rb', closefd=True, buffering=0) # off
 
@@ -261,17 +261,17 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
             if fd is not None:
                 self.closefd(inode)
 
-    async def read(self, fd, offset, length):
-        LOG.info('read fd %d | offset %d | %d bytes', fd, offset, length)
+    async def read(self, fd, offset, length) -> "bytes":
+        LOG.debug('read fd %d | offset %d | %d bytes', fd, offset, length)
         dec = self._cryptors[fd]
         if isinstance(dec, FileDecryptor):
-            return b''.join(data for data in dec.read(offset, length)) # inefficient
+            return b''.join(dec.read(offset, length)) # inefficient
         else:
             dec.seek(offset, 0)
             return dec.read(length)
 
     async def release(self, fd):
-        LOG.info('release fd %s', fd)
+        LOG.debug('release fd %s', fd)
         # Since we opened all files with its own fd,
         # we only need to close the fd, and not care about lookup count
         try:

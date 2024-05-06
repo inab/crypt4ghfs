@@ -28,7 +28,7 @@ def stat2entry(s):
     return entry
 
 def _get_header_size(opath_fd):
-    fd = os.open(f"/proc/self/fd/{opath_fd}", os.O_RDONLY)
+    fd = os.open(f"/dev/fd/{opath_fd}", os.O_RDONLY)
     buf = bytearray(16)
     if os.readv(fd, [buf]) != 16:
         raise ValueError('Header too small')
