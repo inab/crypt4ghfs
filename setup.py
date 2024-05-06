@@ -5,6 +5,17 @@ from pathlib import Path
 import re
 from setuptools import setup, find_packages
 
+# In this way, we are sure we are getting
+# the installer's version of the library
+# not the system's one
+setupDir = os.path.dirname(__file__)
+sys.path.insert(0, setupDir)
+
+from crypt4ghfs import __author__ as crypt4ghfs_author
+from crypt4ghfs import __license__ as crypt4ghfs_license
+from crypt4ghfs import __title__ as crypt4ghfs_title
+from crypt4ghfs import __version__ as crypt4ghfs_version
+
 _readme = (Path(__file__).parent / "README.md").read_text()
 
 # Populating the install requirements
@@ -18,12 +29,12 @@ with open(
         install_requirements.append(line if m is None else m.group(1))
 
 setup(name='crypt4ghfs',
-      version='1.2.1',
+      version=crypt4ghfs_version,
       url='https://github.com/EGA-archive/crypt4ghfs',
-      license='Apache License 2.0',
-      author='Frédéric Haziza',
+      license=crypt4ghfs_license,
+      author=crypt4ghfs_author,
       author_email='frederic.haziza@crg.eu',
-      description='Crypt4GH FUSE file system',
+      description=crypt4ghfs_title,
       long_description=_readme,
       long_description_content_type="text/markdown",
       packages=find_packages(),

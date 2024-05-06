@@ -5,8 +5,8 @@
 
 """The pipeline package contains code to start an *Ingestion pipeline*."""
 
-__title__ = 'Crypt4GH Filesystem'
-__version__ = '1.1'
+__title__ = 'Crypt4GH FUSE file system'
+__version__ = '1.2.2'
 __author__ = 'Frédéric Haziza'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Crypt4ghFS @ CRG, Barcelona'
