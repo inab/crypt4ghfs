@@ -220,5 +220,6 @@ def main():
         sys.exit(_main())
     except Exception as e:
         LOG.error('%s', e)
+        LOG.exception("Stack")
         sys.exit(1)
 
