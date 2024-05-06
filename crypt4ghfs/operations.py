@@ -100,9 +100,15 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
 
         super(pyfuse3.Operations, self).__init__()
 
-    def fd(self, inode):
+    def fd(self, inode: "int") -> "int":
+        return self._get_inode(inode).fd
+
+    def closefd(self, inode: "int") -> "None":
+        return self._get_inode(inode).close()
+
+    def _get_inode(self, inode: "int") -> "Entry":
         try:
-            return self._inodes[inode].fd
+            return self._inodes[inode]
         except Exception as e:
             LOG.error('fd error: %s', e)
             raise FUSEError(errno.ENOENT)
@@ -229,27 +235,47 @@ class Crypt4ghFS(pyfuse3.Operations, metaclass=NotPermittedMetaclass):
             LOG.error('read-write or append is not supported')
             raise pyfuse3.FUSEError(errno.EPERM)
 
+        flags &= ~os.O_NOFOLLOW
+        fd = None
         try:
-            path = f"/proc/self/fd/{self.fd(inode)}"
-            flags &= ~os.O_NOFOLLOW
-            fd = os.open(path, flags)
-            dec = FileDecryptor(fd, flags, self.keys)
-            self._cryptors[fd] = dec
-            return pyfuse3.FileInfo(fh=fd)
+            entry = self._get_inode(inode)
+            fd = entry.fd
+            # New fd everytime we open, cuz of the segment
+            path = f"/proc/self/fd/{fd}"
+            openfd = os.open(path, flags)
+            f = os.fdopen(openfd, mode='rb', closefd=True, buffering=0) # off
+
+            if entry.is_c4gh():
+                dec = FileDecryptor(f, flags, self.keys)
+                self._cryptors[openfd] = dec
+            else:
+                self._cryptors[openfd] = f
+                
+            return pyfuse3.FileInfo(fh=openfd)
         except Exception as exc:
-            LOG.error('Error opening %s: %s', path, exc)
-            raise FUSEError(errno.EACCES)
+            LOG.error('Error opening inode %s: %s', inode, exc)
+            LOG.exception("Stack trace")
+            raise FUSEError(errno.EACCES) from exc
+        finally:
+            # Invalidate the file descriptor
+            if fd is not None:
+                self.closefd(inode)
 
     async def read(self, fd, offset, length):
         LOG.info('read fd %d | offset %d | %d bytes', fd, offset, length)
         dec = self._cryptors[fd]
-        return b''.join(data for data in dec.read(offset, length)) # inefficient
+        if isinstance(dec, FileDecryptor):
+            return b''.join(data for data in dec.read(offset, length)) # inefficient
+        else:
+            dec.seek(offset, 0)
+            return dec.read(length)
 
     async def release(self, fd):
         LOG.info('release fd %s', fd)
         # Since we opened all files with its own fd,
         # we only need to close the fd, and not care about lookup count
         try:
+            self._cryptors[fd].close()
             del self._cryptors[fd]
         except KeyError as exc:
             LOG.error('Already closed: %s', exc)

@@ -115,7 +115,7 @@ class Entry():
         return os.fsencode(self.display_name)
 
     @property
-    def fd(self):
+    def fd(self) -> "int":
         if self._fd is None:
             self.refcount = 1
             self._fd = os.open(self.underlying_name, os.O_PATH | os.O_NOFOLLOW, dir_fd=self.parent_fd)

@@ -19,9 +19,9 @@ class FileDecryptor():
                  'ciphersegment',
                  'segment')
 
-    def __init__(self, fd, flags, keys):
-        # New fd everytime we open, cuz of the segment
-        self.f = os.fdopen(fd, mode='rb', closefd=True, buffering=0) # off
+    def __init__(self, f, flags, keys):
+        # It should be always a newly open file
+        self.f = f
         # Parse header (yes, for each fd, small cost for caching segment)
         self.session_keys, edit_list = crypt4gh_header.deconstruct(self.f, keys, sender_pubkey=None)
 
@@ -39,6 +39,9 @@ class FileDecryptor():
         self.segment = None
     
     def __del__(self):
+        self.close()
+
+    def close(self):
         LOG.debug('Deleting the FileDecryptor | closing %d', self.f.fileno())
         self.f.close()
 
