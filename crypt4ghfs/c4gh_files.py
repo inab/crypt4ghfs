@@ -30,8 +30,8 @@ class FileDecryptor():
             raise ValueError('Edit list are not supported')
 
         self.hlen = self.f.tell()
-        LOG.info('Payload position: %d', self.hlen)
-        LOG.info('Found %d session keys', len(self.session_keys))
+        LOG.debug('Payload position: %d', self.hlen)
+        LOG.debug('Found %d session keys', len(self.session_keys))
 
         # Crypt4GH decryption buffer
         self.start_ciphersegment = None
@@ -42,10 +42,11 @@ class FileDecryptor():
         self.close()
 
     def close(self):
-        LOG.debug('Deleting the FileDecryptor | closing %d', self.f.fileno())
-        self.f.close()
+        if not self.f.closed:
+            LOG.debug('Deleting the FileDecryptor | closing %d', self.f.fileno())
+            self.f.close()
 
-    def read(self, offset, length):
+    def read(self, offset, length) -> "Iterator[bytes]":
         LOG.debug('Read offset: %s, length: %s', offset, length)
         assert length > 0, "You can't read just 0 bytes"
         while length > 0:
