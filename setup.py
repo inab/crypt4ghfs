@@ -2,6 +2,7 @@ import sys
 assert sys.version_info >= (3, 6), "crypt4gh requires python 3.6 or higher"
 
 from pathlib import Path
+import re
 from setuptools import setup, find_packages
 
 _readme = (Path(__file__).parent / "README.md").read_text()
