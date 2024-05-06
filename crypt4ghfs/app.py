@@ -28,34 +28,68 @@ else:
 LOG = logging.getLogger(__name__)
 
 
-def load_logger(level, include_crypt4gh=False):
+DEFAULT_LOG_HANDLER = "default"
+
+def load_logger(level: "int", include_crypt4gh: "bool" = False, logfile: "Optional[str]" = None, is_foreground: "bool" = False) -> "None":
     assert( level ), "You must pass a Python logging level"
     loggers = {
-        'crypt4ghfs': {'level': level,
-                       'handlers': ['console'],
-                       'propagate': True },
+        'crypt4ghfs': {
+            'level': level,
+            'handlers': [
+                DEFAULT_LOG_HANDLER,
+            ],
+            'propagate': True
+        },
         # 'pyfuse3': {'level': level,
-        #             'handlers': ['console'],
+        #             'handlers': [DEFAULT_LOG_HANDLER],
         #             'propagate': True },
         # 'trio': {'level': level,
-        #          'handlers': ['console'],
+        #          'handlers': [DEFAULT_LOG_HANDLER],
         #          'propagate': True },
     }
     if include_crypt4gh:
-        loggers['crypt4gh'] = {'level': level,
-                               'handlers': ['console'],
-                               'propagate': True }
+        loggers['crypt4gh'] = {
+            'level': level,
+            'handlers': [
+                DEFAULT_LOG_HANDLER,
+            ],
+            'propagate': True
+        }
+    if logfile is not None:
+        default_handler = {
+            'class': 'logging.FileHandler',
+            'formatter': 'simple',
+            'filename': logfile,
+        }
+    elif is_foreground:
+        default_handler = {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'stream': 'ext://sys.stderr'
+        }
+    else:
+        default_handler = {
+            'class': 'logging.SysLogHandler',
+            'formatter': 'simple',
+            'address': '/dev/log',
+            'facility': 'local7',
+        }
 
     dictConfig({
         'version': 1,
-        'root': {'level': 'NOTSET',
-                 'handlers': ['noHandler'] },
+        'root': {
+            'level': 'NOTSET',
+            'handlers': [
+                'noHandler'
+            ]
+        },
         'loggers': loggers,
-        'handlers': { 'noHandler': { 'class': 'logging.NullHandler',
-                                     'level': 'NOTSET' },
-                      'console': { 'class': 'logging.StreamHandler',
-                                   'formatter': 'simple',
-                                   'stream': 'ext://sys.stderr'}
+        'handlers': {
+            'noHandler': {
+                'class': 'logging.NullHandler',
+                'level': 'NOTSET'
+            },
+            DEFAULT_LOG_HANDLER: default_handler,
         },
         'formatters': {'simple': {'format': '[{name:^10}][{levelname:^6}] (L{lineno}) {message}',
                                   'style': '{'},
@@ -91,11 +125,12 @@ def check_perms_ok(conf_file):
         print("This private key will be ignored.", file=sys.stderr)
         raise ValueError(f'Bad permissions for {conf_file}')
 
-def parse_options():
+def parse_options() -> "Tuple[str, RawConfigParser, bool]":
     parser = argparse.ArgumentParser(description='Crypt4GH filesystem')
     parser.add_argument('mountpoint', help='mountpoint for the Crypt4GH filesystem')
     parser.add_argument('--conf', help='configuration file', default='~/.c4gh/fs.conf')
     parser.add_argument('-f', '--foreground', action='store_true', help='do not deamonize and keep in the foreground', default=False)
+    parser.add_argument('-l', '--logfile', help='Send log messages to this file instead of the defaults')
 
     args = parser.parse_args()
 
@@ -117,7 +152,7 @@ def parse_options():
     log_level = conf.get('DEFAULT', 'log_level', fallback=None)
     include_crypt4gh_log = conf.getboolean('DEFAULT', 'include_crypt4gh_log', fallback=False)
     if log_level is not None:
-        load_logger(log_level, include_crypt4gh=include_crypt4gh_log)
+        load_logger(log_level, include_crypt4gh=include_crypt4gh_log, logfile=args.logfile, is_foreground=args.foreground)
 
     return (mountpoint, conf, args.foreground)
 
