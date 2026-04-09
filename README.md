@@ -83,3 +83,25 @@ For the (latest) SSHFS (v3.7), useful to test the above tips:
     meson ..
     ninja
     ninja install
+
+## Docker
+You may use Docker to mount encrypted EGA files using FUSE and decrypt them on-the-fly with your Crypt4GH private key:
+
+    docker build -t ega_crypt4ghfs:{tag}
+    docker run -d --name ega_crypt4ghfs_container \
+        -v /path/to/private.key:/tmp/ega_secret_key:ro \
+        -e USER_PRIVATE_KEY_FILE="/tmp/ega_secret_key" \
+        -e EGA_USERNAME="your_ega_username" \
+        -e EGA_OUTBOX_ENDPOINT="outbox.ega-archive.org" \
+        --device /dev/fuse:/dev/fuse \
+        --cap-add SYS_ADMIN \
+        --security-opt apparmor:unconfined \
+        ega_crypt4ghfs:{tag}
+
+Replace the placeholders:
+
+- `/path/to/private.key`: Local path to your Crypt4GH private key
+- `your_ega_username`: Your EGA account username
+- `EGA_OUTBOX_ENDPOINT`: Change to a custom endpoint if you're using a local EGA
+- `{tag}`: The tag of the image you want to use
+    
