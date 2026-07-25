@@ -4,6 +4,7 @@ assert sys.version_info >= (3, 6), "crypt4gh requires python 3.6 or higher"
 from pathlib import Path
 import re
 from setuptools import setup, find_packages
+import os
 
 # In this way, we are sure we are getting
 # the installer's version of the library

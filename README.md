@@ -87,7 +87,7 @@ For the (latest) SSHFS (v3.7), useful to test the above tips:
 ## Docker
 You may use Docker to mount encrypted EGA files using FUSE and decrypt them on-the-fly with your Crypt4GH private key:
 
-    docker build -t ega_crypt4ghfs:{tag}
+    docker build -t ega_crypt4ghfs:{tag} .
     docker run -d --name ega_crypt4ghfs_container \
         -v /path/to/private.key:/tmp/ega_secret_key:ro \
         -e USER_PRIVATE_KEY_FILE="/tmp/ega_secret_key" \
