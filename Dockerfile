@@ -15,7 +15,7 @@ WORKDIR /user/lib/libfuse
 RUN git checkout fuse-3.16.2 && mkdir build
 WORKDIR /user/lib/libfuse/build
 RUN meson .. && ninja && ninja install && pip install --upgrade pip wheel && \
-    pip install git+https://github.com/inab/crypt4ghfs.git@v1.2.2 && \
+    pip install git+https://github.com/inab/crypt4ghfs.git@v1.2.3 && \
     echo "user_allow_other" >> /etc/fuse.conf
 
 WORKDIR /home
