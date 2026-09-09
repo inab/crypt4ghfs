@@ -1,3 +1,4 @@
 pyfuse3
 trio
 crypt4gh >= 1.6
+pynacl
